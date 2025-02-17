@@ -26,11 +26,11 @@ class SoftWebauthnDevice():
     """
 
     def __init__(self):
-        self.credential_id = None
-        self.private_key = None
+        self.credential_id = b''
+        self.private_key = b''
         self.aaguid = b'\x00'*16
-        self.rp_id = None
-        self.user_handle = None
+        self.rp_id = ''
+        self.user_handle = b''
         self.sign_count = 0
 
     def cred_init(self, rp_id, user_handle):
@@ -127,51 +127,42 @@ class SoftWebauthnDevice():
             'type': 'public-key'
         }
 
-    def to_dict(self, password=None):
+    def to_dict(self) -> dict:
         """Convert the SoftWebauthnDevice object to a dictionary."""
 
-        if password and isinstance(password, str):
-            password = password.encode('utf-8')
-        return {
-            'credential_id': self.credential_id,
-            'private_key': self.private_key.private_bytes(
+        serialized_private_key = (
+            b'' if self.private_key == b''
+            else self.private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption() if password is None
-                else serialization.BestAvailableEncryption(password),
-            ),
+                encryption_algorithm=serialization.NoEncryption()
+            )
+        )
+        return {
+            'credential_id': self.credential_id,
+            'serialized_private_key': serialized_private_key,
             'aaguid': self.aaguid,
             'rp_id': self.rp_id,
             'user_handle': self.user_handle,
             'sign_count': self.sign_count
         }
 
-    def to_bytes(self, password=None):
-        """Convert the SoftWebauthnDevice object to a byte string."""
-
-        return cbor.dump_dict(self.to_dict(password=password))
-
     @classmethod
-    def from_dict(cls, data, password=None):
+    def from_dict(cls, data):
         """Create a SoftWebauthnDevice object from a dictionary."""
 
-        if password and isinstance(password, str):
-            password = password.encode('utf-8')
         device = cls()
         device.credential_id = data['credential_id']
-        device.private_key = serialization.load_pem_private_key(
-            data['private_key'],
-            password=password,
-            backend=default_backend()
+        device.private_key = (
+            b'' if data['serialized_private_key'] == b''
+            else serialization.load_pem_private_key(
+                data['serialized_private_key'],
+                password=None,
+                backend=default_backend()
+            )
         )
         device.aaguid = data['aaguid']
         device.rp_id = data['rp_id']
         device.user_handle = data['user_handle']
         device.sign_count = data['sign_count']
         return device
-
-    @classmethod
-    def from_bytes(cls, data, password=None):
-        """Create a SoftWebauthnDevice object from a byte string."""
-
-        return cls.from_dict(cbor.decode(data), password=password)
