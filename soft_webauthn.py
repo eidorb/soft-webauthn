@@ -132,19 +132,15 @@ class SoftWebauthnDevice():
 
         if password and isinstance(password, str):
             password = password.encode('utf-8')
-        return {
-            'credential_id': self.credential_id,
-            'private_key': self.private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption() if password is None
-                else serialization.BestAvailableEncryption(password),
-            ),
-            'aaguid': self.aaguid,
-            'rp_id': self.rp_id,
-            'user_handle': self.user_handle,
-            'sign_count': self.sign_count
-        }
+        # Represent object attributes as dict keys with serialized private key.
+        dict_repr = {name: value for name, value in vars(self).items()}
+        dict_repr['private_key'] = self.private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption() if password is None
+            else serialization.BestAvailableEncryption(password),
+        )
+        return dict_repr
 
     def to_bytes(self, password=None):
         """Convert the SoftWebauthnDevice object to a byte string."""
@@ -158,16 +154,14 @@ class SoftWebauthnDevice():
         if password and isinstance(password, str):
             password = password.encode('utf-8')
         device = cls()
-        device.credential_id = data['credential_id']
+        # Set object attributes from deserialized values.
+        for name, value in data.items():
+            setattr(device, name, value)
         device.private_key = serialization.load_pem_private_key(
             data['private_key'],
             password=password,
             backend=default_backend()
         )
-        device.aaguid = data['aaguid']
-        device.rp_id = data['rp_id']
-        device.user_handle = data['user_handle']
-        device.sign_count = data['sign_count']
         return device
 
     @classmethod
