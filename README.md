@@ -29,6 +29,9 @@ API) and `tests/test_example.py` (Token/Client vs RP HTTP). Despite internal
 usage of `yubico/python-fido2` package, the project should be usable againts
 other RP implementations as well.
 
+Convert an instance of `SoftWebauthnDevice` to and from a dict with serialised _unencrypted_
+private key using `to_dict()` and `from_dict()`.
+
 ## References
 
 * https://w3c.github.io/webauthn

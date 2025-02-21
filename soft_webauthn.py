@@ -26,11 +26,11 @@ class SoftWebauthnDevice():
     """
 
     def __init__(self):
-        self.credential_id = b''
-        self.private_key = b''
+        self.credential_id = None
+        self.private_key = None
         self.aaguid = b'\x00'*16
-        self.rp_id = ''
-        self.user_handle = b''
+        self.rp_id = None
+        self.user_handle = None
         self.sign_count = 0
 
     def cred_init(self, rp_id, user_handle):
@@ -127,42 +127,37 @@ class SoftWebauthnDevice():
             'type': 'public-key'
         }
 
-    def to_dict(self) -> dict:
-        """Convert the SoftWebauthnDevice object to a dictionary."""
 
-        serialized_private_key = (
-            b'' if self.private_key == b''
-            else self.private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            )
-        )
-        return {
-            'credential_id': self.credential_id,
-            'serialized_private_key': serialized_private_key,
-            'aaguid': self.aaguid,
-            'rp_id': self.rp_id,
-            'user_handle': self.user_handle,
-            'sign_count': self.sign_count
-        }
+def to_dict(device: SoftWebauthnDevice) -> dict:
+    """Converts SoftWebauthnDevice instance to dict with serialized private key."""
 
-    @classmethod
-    def from_dict(cls, data):
-        """Create a SoftWebauthnDevice object from a dictionary."""
+    serialized_private_key =  device.private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    ) if device.private_key else None
+    return {
+        'credential_id': device.credential_id,
+        'serialized_private_key': serialized_private_key,
+        'aaguid': device.aaguid,
+        'rp_id': device.rp_id,
+        'user_handle': device.user_handle,
+        'sign_count': device.sign_count
+    }
 
-        device = cls()
-        device.credential_id = data['credential_id']
-        device.private_key = (
-            b'' if data['serialized_private_key'] == b''
-            else serialization.load_pem_private_key(
-                data['serialized_private_key'],
-                password=None,
-                backend=default_backend()
-            )
-        )
-        device.aaguid = data['aaguid']
-        device.rp_id = data['rp_id']
-        device.user_handle = data['user_handle']
-        device.sign_count = data['sign_count']
-        return device
+
+def from_dict(device_dict: dict) -> SoftWebauthnDevice:
+    """Returns SoftWebauthnDevice instantiated from dict."""
+
+    device = SoftWebauthnDevice()
+    device.credential_id = device_dict['credential_id']
+    device.private_key = serialization.load_pem_private_key(
+        device_dict['serialized_private_key'],
+        password=None,
+        backend=default_backend()
+    ) if device_dict['serialized_private_key'] else None
+    device.aaguid = device_dict['aaguid']
+    device.rp_id = device_dict['rp_id']
+    device.user_handle = device_dict['user_handle']
+    device.sign_count = device_dict['sign_count']
+    return device
